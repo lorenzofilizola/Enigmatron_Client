@@ -2,11 +2,13 @@ import json
 import datetime
 import random
 from enum import Enum
+from typing import List, Tuple, cast
 
 import pytz
 import strings
 from google_images_search import GoogleImagesSearch
-from telegram.ext import Updater, CallbackContext, PollHandler, PollAnswerHandler
+from telegram.ext import Updater, CallbackContext, PollAnswerHandler, InvalidCallbackData, PicklePersistence, \
+    MessageHandler, Filters
 from telegram.ext import CommandHandler, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram import ParseMode
@@ -24,6 +26,20 @@ class WeekDay(Enum):
     FRIDAY = 4
     SATURDAY = 5
     SUNDAY = 6
+
+
+EMOJIS = [
+    u'💪',  # BICEP
+    u'🔥',  # FIRE
+    u'✌'  # VICTORY
+]
+
+MOONS = [
+    u'🌛',
+    u'🌝',
+    u'🌜',
+    u'🌚'
+]
 
 
 ############################### Bot ############################################
@@ -52,7 +68,7 @@ def first_submenu(bot, update):
 
 
 def show_cleaning_calendar(bot, update):
-    r = requests.get('http://localhost:8080/cleaningCalendar')
+    r = requests.get('http://localhost:5000/cleaningCalendar')
     turns = json.loads(r.text)
     message = "*Calendario pulizie:*\n"
     for t in turns:
@@ -67,7 +83,7 @@ def show_cleaning_calendar(bot, update):
 
 
 def show_group_menu(bot, update):
-    r = requests.get('http://localhost:8080/groups')
+    r = requests.get('http://localhost:5000/groups')
     groups = json.loads(r.text)
     print(groups)
     keyboard = []
@@ -100,8 +116,7 @@ def error(update, context):
 
 def main_menu_keyboard():
     keyboard = [[InlineKeyboardButton('Turni di apertura', callback_data='opening_calendar')],
-                [InlineKeyboardButton('Calendario pulizie', callback_data='cleaning_calendar')],
-                [InlineKeyboardButton('Volontari', callback_data='m3')]]
+                [InlineKeyboardButton('Calendario pulizie', callback_data='cleaning_calendar')]]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -133,8 +148,8 @@ def second_menu_message():
 
 
 def check_for_turns(context):
-    r = requests.post('http://localhost:8080/updateCleaningTurns')
-    cleaning_turn = json.loads(requests.get('http://localhost:8080/cleaningTurnsToday').text)
+    r = requests.post('http://localhost:5000/updateCleaningTurns')
+    cleaning_turn = json.loads(requests.get('http://localhost:5000/cleaningTurnsToday').text)
     print(cleaning_turn)
     if cleaning_turn:
         search_params = {
@@ -164,10 +179,10 @@ def send_poll(context):
     friday = today + datetime.timedelta((4 - today.weekday()) % 7)
     saturday = friday + datetime.timedelta(1)
     poll = context.bot.sendPoll(constants.CHAT_ID, is_anonymous=False,
-                         allows_multiple_answers=True, close_date=friday.timetuple(),
-                         question="Quando sei disponibile per i turni di apertura?",
-                         options=[f"Venerdì {friday.strftime('%d/%m')}", f"Sabato {saturday.strftime('%d/%m')}",
-                                  "Non posso partecipare"])
+                                allows_multiple_answers=True, close_date=friday.timetuple(),
+                                question="Quando sei disponibile per i turni di apertura?",
+                                options=[f"Venerdì {friday.strftime('%d/%m')}", f"Sabato {saturday.strftime('%d/%m')}",
+                                         "Non posso partecipare"])
     context.bot.pinChatMessage(constants.CHAT_ID, poll.message_id)
     f = open("poll.txt", "w+")
     f.write(poll.message_id)
@@ -178,45 +193,60 @@ def send_poll_test(bot, context):
     send_poll(context);
 
 
+def check_for_opening_turns_test(bot, context):
+    check_opening_turns(context);
+
+
 def turns_poll_handler(update, context):
     user_id = update.poll_answer.user.id
 
-    r = requests.post(f'http://localhost:8080/resetAvailability?userId={user_id}')
+    r = requests.post(f'http://localhost:5000/resetAvailability?userId={user_id}')
 
     answers = update.poll_answer.option_ids
 
     if answers:
         if 2 in answers:
             for i in range(2):
-                requests.post(f'http://localhost:8080/availability?userId={user_id}&day={i}&available={False}')
+                requests.post(f'http://localhost:5000/availability?userId={user_id}&day={i}&available={False}')
             return
 
         for i in range(2):
-            requests.post(f'http://localhost:8080/availability?userId={user_id}&day={i}&available={i in answers}')
+            requests.post(f'http://localhost:5000/availability?userId={user_id}&day={i}&available={i in answers}')
 
 
-def compute_opening_turns(context):
-    r = requests.post(f'http://localhost:8080/opening_turns')
+def compute_opening_turns(context: CallbackContext):
+    requests.post(f'http://localhost:5000/opening_turns')
+    f = open("poll.txt", "r")
+    poll_id = f.read()
+    f.close()
+    context.bot.deleteMessage(chat_id=constants.CHAT_ID, message_id=poll_id)
+    # TODO: display turns
+
+
+def get_volunteers_today():
+    turn = json.loads(requests.get('http://localhost:5000/openingTurnsToday').text)
+    return turn['volunteers']
 
 
 def check_opening_turns(context):
-    turn = json.loads(requests.get('http://localhost:8080/openingTurnsToday').text)
+    volunteers = get_volunteers_today()
     message = ""
-    for v in turn['volunteers']:
+    for v in volunteers:
         message += f"[{v['firstName']}](tg://user?id={v['id']}) "
     message += "stasera avete il turno!"
     context.bot.send_message(chat_id=constants.CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
+    emoji = random.choice(EMOJIS)
+    context.bot.send_message(chat_id=constants.CHAT_ID, text=emoji, parse_mode=ParseMode.MARKDOWN)
 
 
 def send_trash_memo(context):
     today_date = datetime.date.today()
     message = ""
     weekday = today_date.weekday()
-
-    if weekday == WeekDay.FRIDAY:
+    if weekday == WeekDay.FRIDAY.value:
         message += strings.FRIDAY_TRASH_MEMO
 
-    elif weekday == WeekDay.TUESDAY:
+    elif weekday == WeekDay.TUESDAY.value:
         if today_date.isocalendar().week % 2 == 0:
             message += strings.EVEN_TUESDAY_TRASH_MEMO
         else:
@@ -225,7 +255,7 @@ def send_trash_memo(context):
 
 
 def urge_voting(context):
-    r = requests.get("http://localhost:8080/availability")
+    r = requests.get("http://localhost:5000/availability")
     openings = json.loads(r.text)
     message = "Non abbiamo ancora abbastanza volontari per le aperture di questa settimana.\n"
     enough_volunteers = True
@@ -242,7 +272,7 @@ def urge_voting(context):
     if enough_volunteers:
         return
     else:
-        r = requests.get("http://localhost:8080/abstained")
+        r = requests.get("http://localhost:5000/abstained")
         abstained = json.loads(r.text)
         for v in abstained:
             message += f"[{v['firstName']}](tg://user?id={v['id']}) "
@@ -255,7 +285,7 @@ def urge_voting(context):
 
 
 def show_opening_calendar(bot, update):
-    r = requests.get('http://localhost:8080/openingCalendar')
+    r = requests.get('http://localhost:5000/openingCalendar')
     turns = json.loads(r.text)
     if turns:
         message = "*Calendario aperture:*\n"
@@ -274,14 +304,84 @@ def show_opening_calendar(bot, update):
                                          parse_mode=ParseMode.MARKDOWN)
 
 
-############################# Handlers #########################################
+# TODO: use these functions to implement swapping of turns and user input in general
+def build_keyboard(current_list: List[int]) -> InlineKeyboardMarkup:
+    """Helper function to build the next inline keyboard."""
+    return InlineKeyboardMarkup.from_column(
+        [InlineKeyboardButton(str(i), callback_data='test' + str(i)) for i in range(1, 6)]
+    )
 
-updater = Updater(constants.TOKEN, use_context=True)
+
+def list_button(update: Update, context: CallbackContext) -> None:
+    """Parses the CallbackQuery and updates the message text."""
+    print("now parsing")
+    query = update.callback_query
+    query.answer()
+    # Get the data from the callback_data.
+    # If you're using a type checker like MyPy, you'll have to use typing.cast
+    # to make the checker get the expected type of the callback_data
+    print(query.data)
+    number, number_list = cast(Tuple[int, List[int]], query.data)
+    # append the number to the list
+    number_list.append(number)
+
+    query.edit_message_text(
+        text=f"So far you've selected {number_list}. Choose the next item:",
+        reply_markup=build_keyboard(number_list),
+    )
+
+    # we can delete the data stored for the query, because we've replaced the buttons
+    context.drop_callback_data(query)
+
+
+def handle_invalid_button(update: Update, context: CallbackContext) -> None:
+    """Informs the user that the button is no longer available."""
+    update.callback_query.answer()
+    update.effective_message.edit_text(
+        'Sorry, I could not process this button click 😕 Please send /start to get a new keyboard.'
+    )
+
+
+def test(update: Update, context: CallbackContext) -> None:
+    """Sends a message with 5 inline buttons attached."""
+    number_list: List[int] = []
+    update.message.reply_text('Please choose:', reply_markup=build_keyboard(number_list))
+
+
+def message_handler(update: Update, context: CallbackContext) -> None:
+    if update.message.from_user.id == 761639379:
+        chat_id = update.message.chat_id
+        message_id = update.message.message_id
+        context.bot.send_message(chat_id=chat_id, text=u'🤡',
+                                 reply_to_message_id=message_id, parse_mode=ParseMode.MARKDOWN)
+
+
+def send_message(context: CallbackContext, message: str):
+    context.bot.send_message(chat_id=constants.CHAT_ID, text=message,
+                             parse_mode=ParseMode.MARKDOWN)
+
+
+def closing_hour(context: CallbackContext):
+    volunteers = get_volunteers_today()
+    message = ""
+    for v in volunteers:
+        message += f"[{v['firstName']}](tg://user?id={v['id']}) "
+    message += strings.CLOSING_MESSAGE
+    send_message(context, message)
+    send_message(context, random.choice(MOONS))
+
+
+############################# Handlers #########################################
+persistence = PicklePersistence(
+    filename='enigmatron.pickle', store_callback_data=True
+)
+updater = Updater(constants.TOKEN, use_context=True, arbitrary_callback_data=True, persistence=persistence)
 updater.dispatcher.add_handler(CommandHandler('menu', start))
 updater.dispatcher.add_handler(CommandHandler('check_for_turns', check_for_turns))
 updater.dispatcher.add_handler(CommandHandler('check_opening_turns', check_opening_turns))
 updater.dispatcher.add_handler(CommandHandler('today', today))
 updater.dispatcher.add_handler(CommandHandler('send_poll', send_poll_test))
+updater.dispatcher.add_handler(CommandHandler('check_for_opening_turns_test', check_for_opening_turns_test))
 updater.dispatcher.add_handler(CallbackQueryHandler(main_menu, pattern='main'))
 updater.dispatcher.add_handler(CallbackQueryHandler(first_menu, pattern='m1'))
 updater.dispatcher.add_handler(CallbackQueryHandler(second_menu, pattern='m2'))
@@ -291,6 +391,12 @@ updater.dispatcher.add_handler(CallbackQueryHandler(show_opening_calendar, patte
 updater.dispatcher.add_handler(CallbackQueryHandler(show_group_menu, pattern='group_menu'))
 updater.dispatcher.add_error_handler(error)
 updater.dispatcher.add_handler(PollAnswerHandler(turns_poll_handler, pass_chat_data=True, pass_user_data=True))
+updater.dispatcher.add_handler(CallbackQueryHandler(list_button, pattern='test'))
+updater.dispatcher.add_handler(
+    CallbackQueryHandler(handle_invalid_button, pattern=InvalidCallbackData)
+)
+updater.dispatcher.add_handler(MessageHandler(filters=Filters.text, callback=message_handler))
+updater.dispatcher.add_handler(CommandHandler('test', test))
 
 # Scheduled Tasks
 
@@ -318,16 +424,24 @@ j.run_daily(send_poll, context=updater, days=[0],
             time=target_time)
 
 # Trash memos
-target_time = datetime.time(hour=20, minute=00, second=00, tzinfo=pytz.timezone('Europe/Rome'))
+target_time = datetime.time(hour=18, minute=00, second=00, tzinfo=pytz.timezone('Europe/Rome'))
+j.run_daily(send_trash_memo, context=updater,
+            time=target_time)
+target_time = datetime.time(hour=22, minute=00, second=00, tzinfo=pytz.timezone('Europe/Rome'))
 j.run_daily(send_trash_memo, context=updater,
             time=target_time)
 
 # Remind people to vote for turns
 target_time = datetime.time(hour=12, minute=00, second=00, tzinfo=pytz.timezone('Europe/Rome'))
-j.run_daily(urge_voting, context=updater, days=(1, 2, 3, 4, 5, 6),
+j.run_daily(urge_voting, context=updater, days=(1, 2, 3),
             time=target_time)
 
+# Take tables inside
+target_time = datetime.time(hour=23, minute=59, second=00, tzinfo=pytz.timezone('Europe/Rome'))
+j.run_daily(closing_hour, context=updater, days=(5, 6),
+            time=target_time)
 
 gis = GoogleImagesSearch(constants.GOOGLE_API_KEY, constants.CX)
+
 updater.start_polling()
 updater.idle()
