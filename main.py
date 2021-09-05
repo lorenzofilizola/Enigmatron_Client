@@ -349,6 +349,7 @@ def test(update: Update, context: CallbackContext) -> None:
 
 
 def message_handler(update: Update, context: CallbackContext) -> None:
+    return
     if update.message.from_user.id == 761639379:
         chat_id = update.message.chat_id
         message_id = update.message.message_id
