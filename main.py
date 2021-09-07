@@ -2,7 +2,7 @@ import json
 import datetime
 import random
 from enum import Enum
-from typing import List, Tuple, cast
+from typing import List, Tuple, cast, Any
 from functools import wraps
 
 import pytz
@@ -373,18 +373,17 @@ def test(update: Update, context: CallbackContext) -> None:
 
 
 def message_handler(update: Update, context: CallbackContext) -> None:
-    return
-    if update.message.from_user.id == 761639379:
-        chat_id = update.message.chat_id
-        message_id = update.message.message_id
-        context.bot.send_message(chat_id=chat_id, text=u'🤡',
-                                 reply_to_message_id=message_id, parse_mode=ParseMode.MARKDOWN)
+    text: str = update.message.text
+    if "@Enigmatron" in str:
+        if "turni" in str.lower():
+            reply = prepare_turns_message()
+            send_message(context, reply, update.message.message_id)
 
 
 @send_typing_action
-def send_message(context: CallbackContext, message: str):
+def send_message(context: CallbackContext, message: str, reply_to: int = None):
     context.bot.send_message(chat_id=constants.CHAT_ID, text=message,
-                             parse_mode=ParseMode.MARKDOWN)
+                             reply_to_message_id=reply_to , parse_mode=ParseMode.MARKDOWN)
 
 
 def closing_hour(context: CallbackContext):
