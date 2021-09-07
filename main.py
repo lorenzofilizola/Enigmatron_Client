@@ -304,7 +304,6 @@ def get_opening_turns():
 
 def prepare_turns_message() -> str:
     turns = get_opening_turns()
-    message = ""
     if turns:
         message = "*Calendario aperture:*\n"
         for t in turns:
@@ -314,10 +313,11 @@ def prepare_turns_message() -> str:
             for v in t['volunteers']:
                 message += f"[{v['firstName']}](tg://user?id={v['id']}) "
             message += '\n'
+            return message
     else:
         message = "I turni di questa settimana non sono ancora stati stabiliti. Vi avviserò giovedì alle 15 sui turni " \
                   "definitivi."
-    return message
+        return message
 
 
 @send_typing_action
