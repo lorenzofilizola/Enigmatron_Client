@@ -220,7 +220,8 @@ def compute_opening_turns(context: CallbackContext):
     poll_id = f.read()
     f.close()
     context.bot.deleteMessage(chat_id=constants.CHAT_ID, message_id=poll_id)
-    # TODO: display turns
+    message = prepare_turns_message()
+    send_message(context, message)
 
 
 def get_volunteers_today():
@@ -284,18 +285,29 @@ def urge_voting(context):
                                  reply_to_message_id=poll_id, parse_mode=ParseMode.MARKDOWN)
 
 
-def show_opening_calendar(bot, update):
+def get_opening_turns():
     r = requests.get('http://localhost:5000/openingCalendar')
     turns = json.loads(r.text)
+    return turns
+
+
+def prepare_turns_message() -> String:
+    turns = get_opening_turns()
+    message = "*Calendario aperture:*\n"
+    for t in turns:
+        timestamp = t['opening']['date'] / 1000
+        date = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
+        message += f"*{date}:* "
+        for v in t['volunteers']:
+            message += f"[{v['firstName']}](tg://user?id={v['id']}) "
+        message += '\n'
+    return message
+
+
+def show_opening_calendar(bot, update):
+    turns = get_opening_turns()
     if turns:
-        message = "*Calendario aperture:*\n"
-        for t in turns:
-            timestamp = t['opening']['date'] / 1000
-            date = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
-            message += f"*{date}:* "
-            for v in t['volunteers']:
-                message += f"[{v['firstName']}](tg://user?id={v['id']}) "
-            message += '\n'
+        message = prepare_turns_message()
 
     else:
         message = "I turni di questa settimana non sono ancora stati stabiliti. Vi avviserò giovedì alle 15 sui turni " \
