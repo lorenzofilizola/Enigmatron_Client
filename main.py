@@ -304,26 +304,25 @@ def get_opening_turns():
 
 def prepare_turns_message() -> str:
     turns = get_opening_turns()
-    message = "*Calendario aperture:*\n"
-    for t in turns:
-        timestamp = t['opening']['date'] / 1000
-        date = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
-        message += f"*{date}:* "
-        for v in t['volunteers']:
-            message += f"[{v['firstName']}](tg://user?id={v['id']}) "
-        message += '\n'
+    if turns:
+        message = "*Calendario aperture:*\n"
+        for t in turns:
+            timestamp = t['opening']['date'] / 1000
+            date = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
+            message += f"*{date}:* "
+            for v in t['volunteers']:
+                message += f"[{v['firstName']}](tg://user?id={v['id']}) "
+            message += '\n'
+    else:
+        message = "I turni di questa settimana non sono ancora stati stabiliti. Vi avviserò giovedì alle 15 sui turni " \
+                  "definitivi."
     return message
 
 
 @send_typing_action
 def show_opening_calendar(bot, update):
     turns = get_opening_turns()
-    if turns:
-        message = prepare_turns_message()
-
-    else:
-        message = "I turni di questa settimana non sono ancora stati stabiliti. Vi avviserò giovedì alle 15 sui turni " \
-                  "definitivi."
+    message = prepare_turns_message()
     bot.callback_query.message.edit_text(message,
                                          parse_mode=ParseMode.MARKDOWN)
 
