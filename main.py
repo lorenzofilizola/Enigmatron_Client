@@ -377,7 +377,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
     if "@Enigmatron_bot" in text:
         if "turni" in text.lower():
             reply = prepare_turns_message()
-            send_message(context, reply, update.message.message_id)
+            send_message(context=context, message=reply, reply_to=update.message.message_id)
 
 
 @send_typing_action
