@@ -374,8 +374,8 @@ def test(update: Update, context: CallbackContext) -> None:
 
 def message_handler(update: Update, context: CallbackContext) -> None:
     text: str = update.message.text
-    if "@Enigmatron" in str:
-        if "turni" in str.lower():
+    if "@Enigmatron_bot" in text:
+        if "turni" in text.lower():
             reply = prepare_turns_message()
             send_message(context, reply, update.message.message_id)
 
