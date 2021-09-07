@@ -304,6 +304,7 @@ def get_opening_turns():
 
 def prepare_turns_message() -> str:
     turns = get_opening_turns()
+    message = ""
     if turns:
         message = "*Calendario aperture:*\n"
         for t in turns:
