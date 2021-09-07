@@ -302,7 +302,7 @@ def get_opening_turns():
     return turns
 
 
-def prepare_turns_message() -> String:
+def prepare_turns_message() -> str:
     turns = get_opening_turns()
     message = "*Calendario aperture:*\n"
     for t in turns:
