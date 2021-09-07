@@ -3,6 +3,7 @@ import datetime
 import random
 from enum import Enum
 from typing import List, Tuple, cast
+from functools import wraps
 
 import pytz
 import strings
@@ -145,6 +146,16 @@ def first_menu_message():
 
 def second_menu_message():
     return 'Choose the submenu in second menu:'
+
+
+def send_typing_action(func):
+    @wraps(func)
+    def command_func(update, context, *args, **kwargs):
+        context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
+        return func(update, context, *args, **kwargs)
+
+    return command_func
+
 
 
 def check_for_turns(context):
@@ -369,6 +380,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
                                  reply_to_message_id=message_id, parse_mode=ParseMode.MARKDOWN)
 
 
+@send_typing_action
 def send_message(context: CallbackContext, message: str):
     context.bot.send_message(chat_id=constants.CHAT_ID, text=message,
                              parse_mode=ParseMode.MARKDOWN)
@@ -382,6 +394,7 @@ def closing_hour(context: CallbackContext):
     message += strings.CLOSING_MESSAGE
     send_message(context, message)
     send_message(context, random.choice(MOONS))
+
 
 
 ############################# Handlers #########################################
