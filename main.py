@@ -377,11 +377,12 @@ def message_handler(update: Update, context: CallbackContext) -> None:
     if "@Enigmatron_bot" in text:
         if "turni" in text.lower():
             reply = prepare_turns_message()
-            send_message(chat_id=update.effective_message.chat_id, context=context, text=reply, reply_to=update.message.message_id)
+            send_message(chat_id=update.effective_message.chat_id, update=update,
+                         context=context, text=reply, reply_to=update.message.message_id)
 
 
 @send_typing_action
-def send_message(chat_id: int, context: CallbackContext, text: str, reply_to: int = None):
+def send_message(update: Update, context: CallbackContext, chat_id: int, text: str, reply_to: int = None):
     context.bot.send_message(chat_id=chat_id, text=text,
                              reply_to_message_id=reply_to, parse_mode=ParseMode.MARKDOWN)
 
@@ -392,8 +393,8 @@ def closing_hour(context: CallbackContext):
     for v in volunteers:
         message += f"[{v['firstName']}](tg://user?id={v['id']}) "
     message += strings.CLOSING_MESSAGE
-    send_message(context, message)
-    send_message(context, random.choice(MOONS))
+    send_message(context=context, text=message)
+    send_message(context=context, text=random.choice(MOONS))
 
 
 
