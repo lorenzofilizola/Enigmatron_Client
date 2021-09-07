@@ -380,7 +380,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
             send_message(chat_id=update.effective_message.chat_id, context=context, text=reply, reply_to=update.message.message_id)
 
 
-#@send_typing_action
+@send_typing_action
 def send_message(chat_id: int, context: CallbackContext, text: str, reply_to: int = None):
     context.bot.send_message(chat_id=chat_id, text=text,
                              reply_to_message_id=reply_to, parse_mode=ParseMode.MARKDOWN)
