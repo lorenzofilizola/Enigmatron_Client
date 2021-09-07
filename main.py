@@ -315,6 +315,7 @@ def prepare_turns_message() -> str:
     return message
 
 
+@send_typing_action
 def show_opening_calendar(bot, update):
     turns = get_opening_turns()
     if turns:
