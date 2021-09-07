@@ -12,7 +12,7 @@ from telegram.ext import Updater, CallbackContext, PollAnswerHandler, InvalidCal
     MessageHandler, Filters
 from telegram.ext import CommandHandler, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram import ParseMode
+from telegram import ParseMode, ChatAction
 import constants
 import requests
 
