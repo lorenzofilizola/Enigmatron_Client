@@ -305,6 +305,8 @@ def urge_voting(context):
         send_message(context=context, chat_id=constants.CHAT_ID,
                      text=message, reply_to_message_id=poll_id)
 
+def urge_voting_test(update: Update, context: CallbackContext):
+    urge_voting(context)
 
 def get_opening_turns():
     r = requests.get('http://localhost:5000/openingCalendar')
@@ -418,6 +420,7 @@ updater.dispatcher.add_handler(CommandHandler('check_for_turns', check_for_turns
 updater.dispatcher.add_handler(CommandHandler('check_opening_turns', check_opening_turns))
 updater.dispatcher.add_handler(CommandHandler('today', today))
 updater.dispatcher.add_handler(CommandHandler('send_poll', send_poll_test))
+updater.dispatcher.add_handler(CommandHandler('urge_voting', urge_voting_test))
 updater.dispatcher.add_handler(CommandHandler('check_for_opening_turns_test', check_for_opening_turns_test))
 updater.dispatcher.add_handler(CallbackQueryHandler(main_menu, pattern='main'))
 updater.dispatcher.add_handler(CallbackQueryHandler(first_menu, pattern='m1'))
