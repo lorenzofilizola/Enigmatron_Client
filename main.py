@@ -177,7 +177,7 @@ def check_for_turns(context):
         for v in cleaning_turn['cleaningGroup']['volunteers']:
             message += f"[{v['firstName']}](tg://user?id={v['id']}) "
         message += "tocca a voi pulire!"
-        context.bot.send_message(chat_id=constants.CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
+        send_message(context=context, chat_id=constants.CHAT_ID, text=message)
         context.bot.send_photo(chat_id=constants.CHAT_ID, photo=image.url)
 
 
@@ -246,9 +246,9 @@ def check_opening_turns(context):
     for v in volunteers:
         message += f"[{v['firstName']}](tg://user?id={v['id']}) "
     message += "stasera avete il turno!"
-    context.bot.send_message(chat_id=constants.CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
+    send_message(context=context, chat_id=constants.CHAT_ID, text=message)
     emoji = random.choice(EMOJIS)
-    context.bot.send_message(chat_id=constants.CHAT_ID, text=emoji, parse_mode=ParseMode.MARKDOWN)
+    send_message(context=context, chat_id=constants.CHAT_ID, text=emoji)
 
 
 def send_trash_memo(context):
@@ -263,7 +263,7 @@ def send_trash_memo(context):
             message += strings.EVEN_TUESDAY_TRASH_MEMO
         else:
             message += strings.ODD_TUESDAY_TRASH_MEMO
-    context.bot.send_message(chat_id=constants.CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
+    send_message(context=context, chat_id=constants.CHAT_ID, text=message)
 
 
 def urge_voting(context):
@@ -292,8 +292,8 @@ def urge_voting(context):
         f = open("poll.txt", "r")
         poll_id = f.read()
         f.close()
-        context.bot.send_message(chat_id=constants.CHAT_ID, text=message,
-                                 reply_to_message_id=poll_id, parse_mode=ParseMode.MARKDOWN)
+        send_message(context=context, chat_id=constants.CHAT_ID,
+                     text=message, reply_to_message_id=poll_id)
 
 
 def get_opening_turns():
