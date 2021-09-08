@@ -1,6 +1,8 @@
 import json
 import datetime
 import random
+import logging
+import sys
 from enum import Enum
 from typing import List, Tuple, cast, Any
 from functools import wraps
@@ -41,6 +43,14 @@ MOONS = [
     u'🌜',
     u'🌚'
 ]
+
+logger = logging.getLogger('logger')
+
+def exception_handler(type, value, tb):
+    logger.exception(f"Uncaught exception: {str(value)}")
+
+
+sys.excepthook = exception_handler
 
 
 ############################### Bot ############################################
