@@ -292,6 +292,8 @@ def urge_voting(context):
             enough_volunteers = False
 
     if enough_volunteers:
+        print(openings)
+        print("Enough volunteers")
         return
     else:
         r = requests.get("http://localhost:5000/abstained")
